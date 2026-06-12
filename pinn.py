@@ -38,3 +38,28 @@ sample_x = torch.tensor([[1.2],[3.2],[5.0]], requires_grad=True)
 prediction = model(sample_x, sample_t)
 print(prediction)
 
+# Our PINN works
+# the weights are random so teh numbers that come out the other end are useless until we implement our loss function
+
+
+def loss_pde(model):
+    x = torch.rand(2000, 1, requires_grad=True)
+    t = torch.rand(2000, 1, requires_grad=True)
+    # torch.rand uses the Uniform distribution and the values only range from 0 to 1
+    u = model(x,t)
+    ut_firstpde = torch.autograd.grad(u, t, grad_outputs=torch.ones_like(u), create_graph=True)
+    ux_firstpde = torch.autograd.grad(u, x, grad_outputs=torch.ones_like(u), create_graph=True)
+    ux_secondpde = torch.autograd.grad(ux_firstpde[0], x, grad_outputs=torch.ones_like(ux_firstpde[0]), create_graph=True)
+    # ux_firstpde[0], we use insted of simply writing ux_fristpde because ux_firstpde is a tuple and because torch.autograd.grad returns a tuple
+    # even if we are differentiating with respect to one tensor ==> so the actual gradiet tensor we get from differentiating becomes the one and only element of the tuple
+    # the tuple reads like this -> (tensor([...]),)
+    # the tensor is at index 0 of teh tuple and we call it by using ux_firstpde[0]
+
+    alpha = 0.1
+
+    L_pde = ((ut_firstpde[0] - alpha*ux_secondpde[0])**2).mean()
+    # mean squared error process
+
+    return L_pde
+
+print(loss_pde(model))
