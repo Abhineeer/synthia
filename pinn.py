@@ -78,3 +78,14 @@ def loss_bc(model):
 
 print(loss_bc(model))
 
+def loss_ic(model):
+    t = torch.randint(low=0, high=1, size=(200, 1)).float()
+    x = torch.rand(200, 1)
+    u_ic = torch.sin(torch.pi*x)
+
+    u = model(x,t)
+    loss_ic = ((u_ic - u)**2).mean()
+    return loss_ic
+
+print(loss_ic(model))
+
