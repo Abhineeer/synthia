@@ -63,3 +63,18 @@ def loss_pde(model):
     return L_pde
 
 print(loss_pde(model))
+# This returns a scalar but it means nothing just yet since the model in untrained, but we have the working mechanism
+
+def loss_bc(model):
+    x = torch.randint(low=0, high=2, size=(200,1)).float()
+    # low is 0 and included however since high is excluded we need 1 to be included to we set high=2
+    # size is how many points - shape of the tuples
+    t = torch.rand(200, 1)
+
+    u = model(x, t)
+    L_bc = (u**2).mean()
+
+    return L_bc
+
+print(loss_bc(model))
+
