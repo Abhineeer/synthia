@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import torch.optim as optim
 
 class PINN(nn.Module):
     def __init__(self):
@@ -80,6 +80,8 @@ print(loss_bc(model))
 
 def loss_ic(model):
     t = torch.randint(low=0, high=1, size=(200, 1)).float()
+    #  another way to write this t = 0 as this is the initial condition is:
+    # t = torch.zeros(200,1) ---> zero across teh entire array just like above
     x = torch.rand(200, 1)
     u_ic = torch.sin(torch.pi*x)
 
@@ -88,4 +90,28 @@ def loss_ic(model):
     return loss_ic
 
 print(loss_ic(model))
+
+optimizer = optim.Adam(model.parameters(), lr = 0.001)
+# lr is the learning rate, its a hyperparameter that controls the step size the optimizer takes when updating model weights
+# total_loss = loss_pde(model) + loss_bc(model) + loss_ic(model)
+
+for i in range(10000):
+    optimizer.zero_grad()
+    
+    loss1 = loss_pde(model)
+    loss2 = loss_bc(model)
+    loss3 = loss_ic(model) 
+
+    total_loss = loss1 + loss2 + loss3
+    total_loss.backward()
+
+    optimizer.step()
+    if i % 1000 == 0:
+        print(loss1)
+        print(loss2)
+        print(loss3)
+        print("-----------")
+        print(total_loss)
+        print("***********")
+
 
