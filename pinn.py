@@ -32,12 +32,6 @@ class PINN(nn.Module):
         return self.network(combined)
     
 
-model = PINN()
-sample_t = torch.tensor([[2.0],[0.4],[0.5]], requires_grad=True)
-sample_x = torch.tensor([[1.2],[3.2],[5.0]], requires_grad=True)
-prediction = model(sample_x, sample_t)
-print(prediction)
-
 # Our PINN works
 # the weights are random so teh numbers that come out the other end are useless until we implement our loss function
 
@@ -62,7 +56,7 @@ def loss_pde(model):
 
     return L_pde
 
-print(loss_pde(model))
+# print(loss_pde(model))
 # This returns a scalar but it means nothing just yet since the model in untrained, but we have the working mechanism
 
 def loss_bc(model):
@@ -76,7 +70,7 @@ def loss_bc(model):
 
     return L_bc
 
-print(loss_bc(model))
+# print(loss_bc(model))
 
 def loss_ic(model):
     t = torch.randint(low=0, high=1, size=(200, 1)).float()
@@ -89,29 +83,57 @@ def loss_ic(model):
     loss_ic = ((u_ic - u)**2).mean()
     return loss_ic
 
-print(loss_ic(model))
+# print(loss_ic(model))
 
-optimizer = optim.Adam(model.parameters(), lr = 0.001)
-# lr is the learning rate, its a hyperparameter that controls the step size the optimizer takes when updating model weights
-# total_loss = loss_pde(model) + loss_bc(model) + loss_ic(model)
+if __name__ == "__main__":
+    model = PINN()
+    sample_t = torch.tensor([[2.0],[0.4],[0.5]], requires_grad=True)
+    sample_x = torch.tensor([[1.2],[3.2],[5.0]], requires_grad=True)
+    prediction = model(sample_x, sample_t)
+    print(prediction)
 
-for i in range(10000):
-    optimizer.zero_grad()
-    
-    loss1 = loss_pde(model)
-    loss2 = loss_bc(model)
-    loss3 = loss_ic(model) 
+    optimizer = optim.Adam(model.parameters(), lr = 0.001)
+    # This is instantiating an optimizer
+    # adam is an optimizer whose job is to update the weights in order to reduce loss
+    # nn.Linear computes y = W*x + b (W is a matrix of weights and b is baises)
+    # Adam's job is to update W and b in every nn.Linear layer after each step
+    # nn.Linear(2, 64) takes 2 inputs (x and t) ad outputs 64 numbers
+    # the 64 output numbers has W a 64x2 matrix of weights. Each of teh outputs is a weighted sum of the 2 inputs, b is a vector of 64 biases, one added to each output
+    # Adam's job is to look at the loss and nudge every single number in W and b slightly so the loss gets smaller
 
-    total_loss = loss1 + loss2 + loss3
-    total_loss.backward()
+    # What are model.parameters()??
+    # They are just all the W matrices and b vectors inside the 4 layers of nn.Linear
+    # We present adam with the numbers it is allowed to update and it decides the direction to nudge the weights in
 
-    optimizer.step()
-    if i % 1000 == 0:
-        print(loss1)
-        print(loss2)
-        print(loss3)
-        print("-----------")
-        print(total_loss)
-        print("***********")
+    # lr is the learning rate, its a hyperparameter that controls the step size the optimizer takes when updating model weights
 
+    for i in range(10000):
+        optimizer.zero_grad()
+        # This basically zeros each step's gradients that would normally pile onto the previous step's
+        # pytorch accumulates gradients by default this mitigates the problem of not being able to compare gradients across steps
+        
+        loss1 = loss_pde(model)
+        loss2 = loss_bc(model)
+        loss3 = loss_ic(model) 
+        # we are saving the losses in variables so we lock it in which prevents us from using one and printing something else down below
+
+        total_loss = loss1 + loss2 + loss3
+        total_loss.backward()
+        # Forward passes are input -> layers -> prediction -> loss
+        # backward() goes in the other direction, walks back every opeation and computes how much did each weight contribute to the loss
+        # that number is the gradient adam then uses in .step() to nudge each weight in the direction that reduces the loss
+
+        optimizer.step()
+        if i % 1000 == 0:
+            print(loss1)
+            print(loss2)
+            print(loss3)
+            print("-----------")
+            print(total_loss)
+            print("***********")
+
+        # the optimizer is teaching the model to optimize and get the loss as close to 0 as possible
+        # This leads to satisfying the equation which is what we need
+
+    torch.save(model.state_dict(), "models/heat_pinn.pth")
 

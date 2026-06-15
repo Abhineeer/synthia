@@ -39,31 +39,31 @@ def compute_l2(u_out, u_exact):
      return np.sqrt(np.mean((u_out - u_exact)**2))
     
      
-    
-x_out, t_out, u_out = solve_heat_fd(0.1, 100, 2500)
-    
+if __name__ == "__main__":    
+    x_out, t_out, u_out = solve_heat_fd(0.1, 100, 2500)
+        
 
-# ----- t = 0.1 -------
-plt.plot(x_out, u_exact(x_out, 0.1))
-plt.plot(x_out, u_out[245, :])
-print(compute_l2(u_out[245,:], u_exact(x_out, 0.1)))
-plt.legend(["Exact", "FD"])
+    # ----- t = 0.1 -------
+    plt.plot(x_out, u_exact(x_out, 0.1))
+    plt.plot(x_out, u_out[245, :])
+    print(compute_l2(u_out[245,:], u_exact(x_out, 0.1)))
+    plt.legend(["Exact", "FD"])
 
-# plt.savefig("figures/fd_validation_t01.png")
-plt.show()
+    # plt.savefig("figures/fd_validation_t01.png")
+    plt.show()
 
-# ----- t = 0.5 -------
-plt.plot(x_out, u_exact(x_out, 0.5))
-plt.plot(x_out, u_out[int(0.5/t_out[1]), :])
-print(compute_l2(u_out[int(0.5/t_out[1]),:], u_exact(x_out, 0.5)))
-plt.legend(["Exact", "FD"])
-# plt.savefig("figures/fd_validation_t05.png")
-plt.show()
+    # ----- t = 0.5 -------
+    plt.plot(x_out, u_exact(x_out, 0.5))
+    plt.plot(x_out, u_out[int(0.5/t_out[1]), :])
+    print(compute_l2(u_out[int(0.5/t_out[1]),:], u_exact(x_out, 0.5)))
+    plt.legend(["Exact", "FD"])
+    # plt.savefig("figures/fd_validation_t05.png")
+    plt.show()
 
-# ----- t = 1 ---------
-plt.plot(x_out, u_out[int(1/t_out[1]), :])
-plt.plot(x_out, u_exact(x_out, 1))
-print(compute_l2(u_out[int(1/t_out[1]),:], u_exact(x_out, 1)))
-plt.legend(["Exact", "FD"])
-# plt.savefig("figures/fd_validation_t1.png")
-plt.show()
+    # ----- t = 1 ---------
+    plt.plot(x_out, u_out[int(1/t_out[1]), :])
+    plt.plot(x_out, u_exact(x_out, 1))
+    print(compute_l2(u_out[int(1/t_out[1]),:], u_exact(x_out, 1)))
+    plt.legend(["Exact", "FD"])
+    # plt.savefig("figures/fd_validation_t1.png")
+    plt.show()
