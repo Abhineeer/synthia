@@ -18,6 +18,10 @@ x_out, t_out, u_out = heat_fd.solve_heat_fd(0.1, 100, 2500)
 # u_out is the FD solver temperature output
 
 model.eval()
+# switches the network from training mode to evaluation (inference) mode
+# in training mode the model changes weights and biases but in eval mode it doesnt, it works with the saved weights and biases
+
+# model.eval() switches dropout off while model.train() has it on. We need it on in the former to get different predictions each forward pass
 
 prediction1 = model(x_tensor, t_point1)
 prediction2 = model(x_tensor, t_point5)
@@ -41,7 +45,7 @@ rel_l2_point1 = np.sqrt(np.mean((u_pinn - u_fd_t01)**2))/np.sqrt(np.mean(u_fd_t0
 print(rel_l2_point1)
 
 plt.legend(["FD", "PINN"])
-plt.savefig("figures/fd_pinn_comparision_tpoint1.png")
+# plt.savefig("figures/fd_pinn_comparision_tpoint1.png")
 plt.show()
 
 
@@ -60,7 +64,7 @@ rel_l2_point5 = np.sqrt(np.mean((u_pinn - u_fd_t05)**2))/np.sqrt(np.mean(u_fd_t0
 print(rel_l2_point5)
 
 plt.legend(["FD", "PINN"])
-plt.savefig("figures/fd_pinn_comparision_tpoint5.png")
+# plt.savefig("figures/fd_pinn_comparision_tpoint5.png")
 plt.show()
 
 # ------- t = 1s ------------
@@ -78,5 +82,14 @@ rel_l2_1 = np.sqrt(np.mean((u_pinn - u_fd_t1)**2))/np.sqrt(np.mean(u_fd_t1**2))
 print(rel_l2_1)
 
 plt.legend(["FD", "PINN"])
-plt.savefig("figures/fd_pinn_comparision_t1.png")
+# plt.savefig("figures/fd_pinn_comparision_t1.png")
 plt.show()
+
+
+# 2 POINTS TO NOTE
+# the simulation runs from 0 to 1. 0.1, 0.5, and 1 are not seconds they represent how far along teh simulation are we
+# 1 represetns end of simulation
+
+# Somethign to note:
+# error goes up from 0.06% (0.1) to 0.12% (0.5) to 0.23% (1), why???
+# because we are working with relative error and as the simulation progresses the temperature levels out and the absolute error may be small but relatively seems large and therefore we see this interesting result

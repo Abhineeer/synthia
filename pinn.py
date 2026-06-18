@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import matplotlib.pyplot as plt
+import numpy as np
 
 class PINN(nn.Module):
     def __init__(self):
@@ -11,14 +13,19 @@ class PINN(nn.Module):
         self.network = nn.Sequential(
             nn.Linear(2,64),
             nn.Tanh(),
+            nn.Dropout(p=0.1),
             nn.Linear(64,64),
             nn.Tanh(),
+            nn.Dropout(p=0.1),
             nn.Linear(64, 64),
             nn.Tanh(),
+            nn.Dropout(p=0.1),
             nn.Linear(64,1)
 
             # the first linear takes in two inputs [position and time], the second linear outputs one value, that being temperature at that position and time
             # Using 64 neurons - as sepcified in the spec and we need 3 layers of Linear and Tanh
+            # dropout zeros out the output of a neuron, Tanh is part of computing the output
+            # Linear computes the value Tanh squashes it. Dropout decides whether to pass it on or zero it out.
         )
 
     def forward(self, x, t):
@@ -85,6 +92,22 @@ def loss_ic(model):
 
 # print(loss_ic(model))
 
+def mc_dropout_predict(model, x, t, n_passes):
+    model.train()
+    # switches to training mode
+    results = []
+    # its an empty list where the results stay
+    for i in range(n_passes):
+        res = model(x,t).detach()
+        # detach returns a new tensor that is disconnected from the computational graph
+        # when we call detach it stops tracking future operations on that one tensor
+        results.append(res)
+    
+    final_res = torch.stack(results)
+    mean = final_res.mean(dim=0) 
+    std = final_res.std(dim=0)
+    return mean, std
+
 if __name__ == "__main__":
     model = PINN()
     sample_t = torch.tensor([[2.0],[0.4],[0.5]], requires_grad=True)
@@ -136,4 +159,18 @@ if __name__ == "__main__":
         # This leads to satisfying the equation which is what we need
 
     torch.save(model.state_dict(), "models/heat_pinn.pth")
+
+    x_new = torch.linspace(0, 1, 100).reshape(100, 1)
+    t_new = torch.full((100, 1), 0.5)
+    # we need both to be the same size that being 100 rows and 1 column
+    mean, std = mc_dropout_predict(model, x_new, t_new, 200)
+
+    plt.plot(x_new.numpy().flatten(), mean.numpy().flatten())
+    plt.fill_between(x_new.numpy().flatten(), (mean - 2*std).numpy().flatten(), (mean + 2*std).numpy().flatten(), color="blue")
+    plt.xlabel("x")
+    plt.ylabel("u(x, t=0.5)")
+    plt.title("MC Dropout Uncertainty @ t = 0.5")
+
+    plt.savefig("figures/MC_dropout_t_0.5.png")
+    plt.show()
 
