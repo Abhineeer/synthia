@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 class PINN(nn.Module):
     def __init__(self):
@@ -109,6 +110,8 @@ def mc_dropout_predict(model, x, t, n_passes):
     return mean, std
 
 if __name__ == "__main__":
+    torch.manual_seed(10)
+    start_time = time.perf_counter()
     model = PINN()
     sample_t = torch.tensor([[2.0],[0.4],[0.5]], requires_grad=True)
     sample_x = torch.tensor([[1.2],[3.2],[5.0]], requires_grad=True)
@@ -160,10 +163,15 @@ if __name__ == "__main__":
 
     torch.save(model.state_dict(), "models/heat_pinn.pth")
 
+    end_time = time.perf_counter()
+    time_elapsed = end_time - start_time
+
     x_new = torch.linspace(0, 1, 100).reshape(100, 1)
     t_new = torch.full((100, 1), 0.5)
     # we need both to be the same size that being 100 rows and 1 column
     mean, std = mc_dropout_predict(model, x_new, t_new, 200)
+
+    print(time_elapsed)
 
     plt.plot(x_new.numpy().flatten(), mean.numpy().flatten())
     plt.fill_between(x_new.numpy().flatten(), (mean - 2*std).numpy().flatten(), (mean + 2*std).numpy().flatten(), color="blue")

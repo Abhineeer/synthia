@@ -8,7 +8,7 @@ r = 0.4
 alpha = 0.1
 
 def u_exact(x, t):
-        return np.sin(np.pi*x)*np.e**(-1*alpha*(np.pi)**2*t)
+    return np.sin(np.pi*x)*np.e**(-1*alpha*(np.pi)**2*t)
 
 # x in u_exact is the spatial grid
 # while it is x axis in plt.plot --> 2 jobs
