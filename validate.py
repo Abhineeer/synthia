@@ -132,6 +132,7 @@ results_dict = {
     "speedup_pinn_vs_fd": speedup_ratio,
     "training_time_seconds": 124.19095739995828
 }
+# this is a dictionary made solely to compile the numbers and eventually json.dump -- down below
 
 with open("benchmarks/benchmark_phase1.json", "w") as f:
     json.dump(results_dict, f, indent=4)
