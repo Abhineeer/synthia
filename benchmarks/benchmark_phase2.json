@@ -1,0 +1,25 @@
+{
+    "rel_l2_vs_fd": {
+        "t_0.1": 0.012901920210598963,
+        "t_0.5": 0.015378269167785997,
+        "t_1.0": 0.024296121216319754
+    },
+    "rel_l2_vs_exact": {
+        "t_0.1": 0.012901132296118546,
+        "t_0.5": 0.015373228860590355,
+        "t_1.0": 0.024290079835744615
+    },
+    "speedup_pinn_vs_fd": 32.462088021386364,
+    "training_time_seconds": 124.19095739995828,
+    "Mean uncertainty across the domain": 0.05299244448542595,
+    "Max uncertainty across the domain": 0.08269307762384415,
+    "Max uncertainty co-ordinates": {
+        "x": 0.6530612244897959,
+        "t": 0.061224489795918366
+    },
+    "Max gradient of temperature": {
+        "x": 0.0,
+        "t": 0.0
+    },
+    "Uncertainty at max gradient of temperature": 0.04038528725504875
+}

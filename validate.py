@@ -134,7 +134,7 @@ results_dict = {
 }
 # this is a dictionary made solely to compile the numbers and eventually json.dump -- down below
 
-with open("benchmarks/benchmark_phase1.json", "w") as f:
+with open("benchmarks/benchmark_phase2.json", "w") as f:
     json.dump(results_dict, f, indent=4)
 
 # NOTE
