@@ -173,12 +173,28 @@ if __name__ == "__main__":
 
     print(time_elapsed)
 
-    plt.plot(x_new.numpy().flatten(), mean.numpy().flatten())
-    plt.fill_between(x_new.numpy().flatten(), (mean - 2*std).numpy().flatten(), (mean + 2*std).numpy().flatten(), color="blue")
-    plt.xlabel("x")
-    plt.ylabel("u(x, t=0.5)")
-    plt.title("MC Dropout Uncertainty @ t = 0.5")
+    mean_np  = mean.numpy().flatten()
+    std_np   = std.numpy().flatten()
+    x_np     = x_new.numpy().flatten()
 
-    plt.savefig("figures/MC_dropout_t_0.5.png")
+    ACCENT, PAPER, HAIRLINE, INK_SOFT = "#B63679", "#FAFBFC", "#E2E6EA", "#3D4852"
+    plt.rcParams.update({"font.family": "serif", "mathtext.fontset": "stix"})
+
+    fig, ax = plt.subplots(figsize=(6.2, 4.0), dpi=200)
+    fig.patch.set_facecolor(PAPER); ax.set_facecolor(PAPER)
+
+    ax.fill_between(x_np, mean_np - 2*std_np, mean_np + 2*std_np,
+                    color=ACCENT, alpha=0.18, linewidth=0, label=r"$\pm 2\sigma$ (MC Dropout)")
+    ax.plot(x_np, mean_np, color=ACCENT, linewidth=1.8, label="mean prediction")
+    ax.axhline(0, color=HAIRLINE, linewidth=1, zorder=0)
+
+    for s in ("top", "right"): ax.spines[s].set_visible(False)
+    ax.set_xlabel(r"$x$"); ax.set_ylabel(r"$u(x,\ t=0.5)$"); ax.set_xlim(0, 1)
+    ax.tick_params(length=3, colors=INK_SOFT)
+    ax.legend(frameon=False, fontsize=9, loc="upper right")
+
+    fig.tight_layout()
+    fig.savefig("figures/MC_dropout_t_0.5.png", facecolor=PAPER, bbox_inches="tight", dpi=200)
     plt.show()
+
 
