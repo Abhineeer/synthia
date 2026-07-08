@@ -24,6 +24,7 @@ def solve_heat_fd(alpha_new, n_x, n_t):
 
     u_new = np.zeros((n_t + 1, n_x))
     u_new[0] = np.sin(np.pi*x_new)
+    # u_new is a 2D array
 
     for n in range(n_t):
         u_new[n+1, 1:-1] = alpha_new*(dt2/dx2**2)*(u_new[n, 2:] + u_new[n, :-2] - 2*u_new[n, 1:-1]) + u_new[n, 1:-1]

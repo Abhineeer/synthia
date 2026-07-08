@@ -25,7 +25,10 @@ class InPINN(nn.Module):
     def forward(self, x, t):
         combined = torch.cat((x, t), dim=1)
         return self.network(combined)
-    
+
+x_obs = torch.rand(150, 1)
+t_obs = torch.rand(150, 1)
+# torch.rand - 150 random points of x and t, [0, 1)
     
 def loss_pde(model):
     x = torch.rand(2000, 1, requires_grad=True)
