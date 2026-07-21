@@ -84,7 +84,7 @@ t_obs = torch.rand(500, 1, device=device)*T_max
 # Their shape is (150, 1) - rows,cols
 combined_obs = torch.cat((t_obs, x_obs), dim=1)
 # x and t in the same array of shape (150, 2)
-#  2 columns of 150 values
+# 2 columns of 150 values
 combined_obs_array = combined_obs.cpu().numpy()
 # converts the torch tensor to a numpy array, exactly the type we need for the interpolator
 # We have to get it to the cpu from the gpu before converting to numpy array
@@ -112,7 +112,7 @@ def loss_data(model, x_obs, t_obs, u_ex_data):
 
 
 if __name__ == "__main__":
-    # torch.manual_seed(42)
+    torch.manual_seed(40)
     model = InPINN().to(device)
     optimizer = optim.Adam(model.parameters(), lr = 0.001)
     alpha_vals = []
