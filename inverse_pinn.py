@@ -4,6 +4,8 @@ import torch.optim as optim
 from scipy.interpolate import RegularGridInterpolator
 from solvers.heat_fd import solve_heat_fd
 import matplotlib.pyplot as plt
+import json
+import os
 
 class InPINN(nn.Module):
     def __init__(self, *args, **kwargs):
@@ -157,15 +159,56 @@ def train_inverse_pinn(sigma, seed, n_steps=75000):
     
 
 
-sigma_vals = [0.01, 0.05, 0.1 ,0.2]
+sigma_vals = [0.01, 0.05, 0.1, 0.2]
+seed_vals = [40, 10, 21, 102, 93]
 sigma_count = len(sigma_vals)
+seed_count = len(seed_vals)
+results_dict = {}
+ave_alpha_recovered = 0
 
 for i in range(sigma_count):
     print("------- sigma = " + str(sigma_vals[i]) + " -------")
-    alpha_recovered = train_inverse_pinn(sigma_vals[i], 40, 75000)
-    error = abs(alpha_recovered - 0.1)
-    error_pct = (error / 0.1) * 100
-    print("alpha recovered: " + str(alpha_recovered))
-    print("error: " + str(error_pct) + "%")
+
+    for j in range(seed_count):
+        alpha_recovered = train_inverse_pinn(sigma_vals[i], seed_vals[j], 75000)
+        print(f"  seed {seed_vals[j]}: alpha_recovered = {alpha_recovered}")
+        ave_alpha_recovered += alpha_recovered
+
+    ave_alpha_recovered /= seed_count
+
+    error = abs(ave_alpha_recovered - 0.1)
+    error_percentage = (error / 0.1) * 100
+    print("alpha recovered: " + str(ave_alpha_recovered))
+    print("error: " + str(error_percentage) + "%")
+    print()
+
+    key = f"sigma_{sigma_vals[i]}"
+    results_dict[key] = {
+        "inverse_pinn" : {
+            "alpha_recovered": float(ave_alpha_recovered),
+            "error_pct": float(error_percentage)
+        }
+    }
+
+    ave_alpha_recovered = 0
+    # resetting
 
 
+json_path = "benchmarks/benchmark_inverse.json"
+
+if os.path.exists(json_path):
+    with open(json_path, "r") as f:
+        full_results = json.load(f)
+else:
+    full_results = {}
+
+for key, value in results_dict.items():
+    if key not in full_results:
+        full_results[key] = {}
+    full_results[key]["inverse_pinn"] = value["inverse_pinn"]
+
+os.makedirs("benchmarks", exist_ok=True)
+with open(json_path, "w") as f:
+    json.dump(full_results, f, indent=2)
+
+print(f"Saved PINN results to {json_path}")

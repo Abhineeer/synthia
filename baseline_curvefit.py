@@ -1,6 +1,8 @@
 import numpy as np
 from scipy.optimize import curve_fit
 from solvers.heat_fd import u_exact
+import json
+import os
 
 rng = np.random.default_rng()
 # this is the random number generator initialized for np
@@ -10,11 +12,12 @@ t_obs = rng.uniform(low=0, high=1, size=150)
 u_obs = u_exact(x_obs, t_obs)
 # I am using the exact solution instead of teh finite solver because I want to isolate teh variable I am acutally testing. Instead of having uncertainty in everything I choose to only test teh curve_fit mechanism.
 
-noise_vals = [0.01, 0.05, 0.1, 0.2]
+noise_vals = [0.01, 0.05, 0.1, 0.2, 0.5]
 count = len(noise_vals)
 
 ave_alpha_recovered = 0
 ave_alpha_stderr = 0
+results_dict = {}
 
 def f(combined_obs, alpha):
     result = np.sin(np.pi*combined_obs[0])*np.exp(-1*alpha*(np.pi)**2*combined_obs[1])
@@ -23,16 +26,16 @@ def f(combined_obs, alpha):
     # This is the model function
 
 for i in range(count):
-    noise = np.random.randn(150, )*noise_vals[i]
-    u_ex_data = u_obs + noise
-
-    # print(u_obs.min(), u_obs.max())
-    # print(u_ex_data.min(), u_ex_data.max())
-    # SAnity check
 
     combined_obs = np.vstack((x_obs, t_obs))
 
     for j in range(20):
+        noise = np.random.randn(150, )*noise_vals[i]
+        u_ex_data = u_obs + noise
+
+        # print(u_obs.min(), u_obs.max())
+        # print(u_ex_data.min(), u_ex_data.max())
+        # SAnity check
         popt, pcov = curve_fit(f, combined_obs, u_ex_data, p0=[0.5])
         # popt: paramater optimal values - Its an arrys containing the best fit parameters that curve_fit found, values that minimized the sum of squared residuals.
         # For this there is only one unknown alpha = we can pull it out using popt[0]
@@ -61,6 +64,32 @@ for i in range(count):
     print(ave_alpha_stderr)
     print()
 
+    key = f"sigma_{noise_vals[i]}"
+    results_dict[key] = {
+        "curve_fit" : {
+            "alpha_recovered": float(ave_alpha_recovered),
+            "error_pct": float(error_percentage),
+            "stderr": float(ave_alpha_stderr)
+        }
+    }
+    
     ave_alpha_recovered = 0;
     ave_alpha_stderr = 0;
     # resetting values for the next run
+
+
+json_path = "benchmarks/benchmark_inverse.json"
+if os.path.exists(json_path):
+    with open(json_path, "r") as f:
+        full_results = json.load(f)
+else:
+    full_results = {}
+
+for key, value in results_dict.items():
+    if key not in full_results:
+        full_results[key] = {}
+    full_results[key]["curve_fit"] = value["curve_fit"]
+
+os.makedirs("benchmarks", exist_ok=True)
+with open(json_path, "w") as f:
+    json.dump(full_results, f, indent=2)
