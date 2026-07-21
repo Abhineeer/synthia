@@ -66,6 +66,13 @@ def loss_ic(model):
     # I copied over the loss_bc and ic same as before no changes needed
     return loss_ic
 
+def loss_data(model, x_obs, t_obs, u_ex_data):
+    u_pred = model(x_obs, t_obs)
+    # loss_data constrains the u data, it pins them down. This causes the derivatives of u to be pinned down as well which in turn forces l_pde to use only alter alpha in order to gt the needed results for a fixed yet noisy u.
+
+    L_data = ((u_ex_data - u_pred)**2).mean()
+    return L_data
+
 x_in, t_in, u_in = solve_heat_fd(alpha_new=0.1, n_x=100, n_t=200)
 T_max = t_in.max()
 
@@ -76,49 +83,41 @@ interpolator = RegularGridInterpolator((t_in, x_in), u_in)
 # This marks the completion of the first step of using the internpolator
 # t_in and x_in are the axes and u_in are the plot points
 
-x_obs = torch.rand(500, 1, device=device)
-t_obs = torch.rand(500, 1, device=device)*T_max
-# ------ We went up form 150 to 250 random points to improve accuracy -------
-# obs stands for observed - since this data is designed to be experimental
-# torch.rand - 150 random points of x and t, [0, 1)
-# Their shape is (150, 1) - rows,cols
-combined_obs = torch.cat((t_obs, x_obs), dim=1)
-# x and t in the same array of shape (150, 2)
-# 2 columns of 150 values
-combined_obs_array = combined_obs.cpu().numpy()
-# converts the torch tensor to a numpy array, exactly the type we need for the interpolator
-# We have to get it to the cpu from the gpu before converting to numpy array
 
-u_obs_array = interpolator(combined_obs_array)
-# This is querying it, it will return 150 values of u [It is a numpy array]
+def train_inverse_pinn(sigma, seed, n_steps=75000):
+    x_obs = torch.rand(500, 1, device=device)
+    t_obs = torch.rand(500, 1, device=device)*T_max
+    # ------ We went up form 150 to 250 random points to improve accuracy -------
+    # obs stands for observed - since this data is designed to be experimental
+    # torch.rand - 150 random points of x and t, [0, 1)
+    # Their shape is (150, 1) - rows,cols
+    combined_obs = torch.cat((t_obs, x_obs), dim=1)
+    # x and t in the same array of shape (150, 2)
+    # 2 columns of 150 values
+    combined_obs_array = combined_obs.cpu().numpy()
+    # converts the torch tensor to a numpy array, exactly the type we need for the interpolator
+    # We have to get it to the cpu from the gpu before converting to numpy array
 
-noise = torch.randn(500, )*0.05
-# This is what helps us simulate experimental data
-# (150,) --> This is a 1D array, a flat sequence of numbers
-# (150,1) --> This might look the same but its actually a 2D array. It has 1 column and 150 rows
+    u_obs_array = interpolator(combined_obs_array)
+    # This is querying it, it will return 150 values of u [It is a numpy array]
 
-u_obs = torch.from_numpy(u_obs_array)
-# We convert it before adding the Gaussian noise because the noise is a tensor and adding a tensor to an array would throw an error, NO LIKEY
-u_ex_data = u_obs + noise
-u_ex_data = u_ex_data.reshape(-1, 1).to(device)
-# We want this to be of shape (150, 1) specifially because loss_data needs it to be, by definition of the function
+    noise = torch.randn(500, )*sigma
+    # This is what helps us simulate experimental data
+    # (150,) --> This is a 1D array, a flat sequence of numbers
+    # (150,1) --> This might look the same but its actually a 2D array. It has 1 column and 150 rows
 
-def loss_data(model, x_obs, t_obs, u_ex_data):
-    u_pred = model(x_obs, t_obs)
-    # loss_data constrains the u data, it pins them down. This causes the derivatives of u to be pinned down as well which in turn forces l_pde to use only alter alpha in order to gt the needed results for a fixed yet noisy u.
-
-    L_data = ((u_ex_data - u_pred)**2).mean()
-    return L_data
-
-
-if __name__ == "__main__":
-    torch.manual_seed(40)
+    u_obs = torch.from_numpy(u_obs_array)
+    # We convert it before adding the Gaussian noise because the noise is a tensor and adding a tensor to an array would throw an error, NO LIKEY
+    u_ex_data = u_obs + noise
+    u_ex_data = u_ex_data.reshape(-1, 1).to(device)
+    # We want this to be of shape (150, 1) specifially because loss_data needs it to be, by definition of the function
+    torch.manual_seed(seed)
     model = InPINN().to(device)
     optimizer = optim.Adam(model.parameters(), lr = 0.001)
     alpha_vals = []
     step_count = []
 
-    for i in range(100000):
+    for i in range(n_steps):
         optimizer.zero_grad()
         loss1 = loss_pde(model)
         loss2 = loss_bc(model)
@@ -141,15 +140,32 @@ if __name__ == "__main__":
             step_count.append(i)
 
 
-    torch.save(model.state_dict(), "models/heat_inverse_pinn.pth")
+    # torch.save(model.state_dict(), "models/heat_inverse_pinn.pth")
 
-    ACCENT, PAPER, HAIRLINE, INK_SOFT = "#B63679", "#FAFBFC", "#E2E6EA", "#3D4852"
-    plt.rcParams.update({"font.family": "serif", "mathtext.fontset": "stix"})
-    plt.plot(step_count, alpha_vals)
-    plt.title('Inverse Problem')
-    plt.xlabel('Run')
-    plt.ylabel('Alpha')
-    # plt.legend()
-    plt.savefig("figures/Alpha_inverse_problem.png", facecolor=PAPER, bbox_inches="tight", dpi=200)
-    plt.show()
+    # ACCENT, PAPER, HAIRLINE, INK_SOFT = "#B63679", "#FAFBFC", "#E2E6EA", "#3D4852"
+    # plt.rcParams.update({"font.family": "serif", "mathtext.fontset": "stix"})
+    # plt.plot(step_count, alpha_vals)
+    # plt.title('Inverse Problem')
+    # plt.xlabel('Run')
+    # plt.ylabel('Alpha')
+    # # plt.legend()
+    # plt.savefig("figures/Alpha_inverse_problem.png", facecolor=PAPER, bbox_inches="tight", dpi=200)
+    # plt.show()
+
+    alpha_recovered = model.alpha.item()
+    return alpha_recovered
+    
+
+
+sigma_vals = [0.01, 0.05, 0.1 ,0.2]
+sigma_count = len(sigma_vals)
+
+for i in range(sigma_count):
+    print("------- sigma = " + str(sigma_vals[i]) + " -------")
+    alpha_recovered = train_inverse_pinn(sigma_vals[i], 40, 75000)
+    error = abs(alpha_recovered - 0.1)
+    error_pct = (error / 0.1) * 100
+    print("alpha recovered: " + str(alpha_recovered))
+    print("error: " + str(error_pct) + "%")
+
 

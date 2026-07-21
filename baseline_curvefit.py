@@ -63,3 +63,4 @@ for i in range(count):
 
     ave_alpha_recovered = 0;
     ave_alpha_stderr = 0;
+    # resetting values for the next run
