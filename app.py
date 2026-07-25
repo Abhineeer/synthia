@@ -76,12 +76,53 @@ with tab1:
         f"solved with explicit finite differences"
     )
 
-
     # --- PANEL B: validation, PINNED at α = 0.1 ---
-    # evaluate PINN on the x-grid at t = 0.5
-    # overlay against FD solve at α = 0.1
-    # display rel_l2_vs_fd["t_0.5"] and speedup from benchmarks
-    # st.plotly_chart(fig2)
+
+    x_05 = np.linspace(0, 1, 100)
+    t_05 = np.full((100,), 0.5)
+    x = torch.from_numpy(x_05).reshape(-1,1).float()
+    t = torch.from_numpy(t_05).reshape(-1,1).float()
+
+    model = load_model()
+    with torch.no_grad():
+        output = model(x, t)
+        output_np = output.numpy().flatten()
+        # We need the right shape to be (100, ) and flatten helps out with that
+    
+    print(output_np.shape)
+    print(output_np[50])
+
+    st.subheader("Validation — is the PINN trustworthy?")
+    st.write(
+        "The PINN was trained at α = 0.1. Here its prediction is checked "
+        "against the classical finite-difference solver at the same α, "
+        "at the midpoint in time (t = 0.5)."
+    )
+
+    # FD solution at the exact same setup the PINN was trained on
+    x_fd, t_fd, u_fd = fd_solve(0.1)
+    row_idx = np.argmin(np.abs(t_fd - 0.5))
+    # t_fd - 0.5, subtracting 0.5 from each element in the array and then abs - absolute value of each elemt
+    # argmin finds the 0 or closest to 0 in the array and that will be the closest to t = 0.5
+    u_fd_at_05 = u_fd[row_idx]
+
+    fig2 = go.Figure()
+    fig2.add_trace(go.Scatter(x=x_fd, y=u_fd_at_05, mode="lines",
+                               name="FD solver", line=dict(width=3)))
+    fig2.add_trace(go.Scatter(x=x_05, y=output_np, mode="lines",
+                               name="PINN", line=dict(width=2, dash="dot")))
+    fig2.update_layout(
+        xaxis_title="position x",
+        yaxis_title="u (temperature)",
+        height=380,
+        margin=dict(l=60, r=20, t=30, b=50),
+    )
+    st.plotly_chart(fig2, width='stretch')
+
+    benchmarks = load_benchmarks()
+    col1, col2 = st.columns(2)
+    col1.metric("Relative L2 error vs FD", f"{benchmarks['rel_l2_vs_fd']['t_0.5']*100:.2f}%")
+    col2.metric("Inference speedup vs FD", f"{benchmarks['speedup_pinn_vs_fd']:.1f}×")
 
 with tab2:
     st.info("Parameter recovery results coming soon.")
