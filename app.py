@@ -176,5 +176,15 @@ with tab1:
             f"</div>", unsafe_allow_html=True
         )
 with tab2:
-    st.info("Parameter recovery results coming soon.")
-    # later: read benchmark_inverse.json, render method × noise × error
+    st.markdown("""
+    ##### Recovering hidden physics from noisy data
+
+    Imagine you have a metal rod and a few scattered, imperfect temperature
+    readings taken over time, like a handful of noisy sensor measurements,
+    not a full picture. Can you work backward from those readings to figure
+    out *how fast heat moves through the material* — a property called
+    **thermal diffusivity (α)**? This tab compares two ways of solving that
+    problem: a classical curve-fitting method, and a physics-informed neural
+    network that uses the heat equation itself as a constraint. Adjust the
+    noise slider below to see how each method holds up as the data gets messier.
+    """)

@@ -1,22 +1,33 @@
 import numpy as np
 from scipy.optimize import curve_fit
-from solvers.heat_fd import u_exact
+from scipy.interpolate import RegularGridInterpolator
 import json
+import torch
+from solvers.heat_fd import solve_heat_fd
 import os
 
-rng = np.random.default_rng()
-# this is the random number generator initialized for np
+x_in, t_in, u_in = solve_heat_fd(alpha_new=0.1, n_x=100, n_t=200)
+T_max = t_in.max()
+interpolator = RegularGridInterpolator((t_in, x_in), u_in)
 
-x_obs = rng.uniform(low=0, high=1, size=150)
-t_obs = rng.uniform(low=0, high=1, size=150)
-u_obs = u_exact(x_obs, t_obs)
-# I am using the exact solution instead of teh finite solver because I want to isolate teh variable I am acutally testing. Instead of having uncertainty in everything I choose to only test teh curve_fit mechanism.
+def generate_observations(sigma, seed):
+    torch.manual_seed(seed)
+    x_obs = torch.rand(500, 1)
+    t_obs = torch.rand(500, 1) * T_max
 
-noise_vals = [0.01, 0.05, 0.1, 0.2, 0.5]
+    combined_obs = torch.cat((t_obs, x_obs), dim=1)
+    u_obs_array = interpolator(combined_obs.numpy())
+
+    noise = torch.randn(500, ) * sigma
+    u_obs = torch.from_numpy(u_obs_array)
+    u_ex_data = (u_obs + noise).reshape(-1, 1)
+
+    return x_obs.numpy().flatten(), t_obs.numpy().flatten(), u_ex_data.numpy().flatten()
+
+noise_vals = [0.01, 0.05, 0.1, 0.2]
+seed_vals = [40, 10, 21, 102, 93]
 count = len(noise_vals)
 
-ave_alpha_recovered = 0
-ave_alpha_stderr = 0
 results_dict = {}
 
 def f(combined_obs, alpha):
@@ -27,16 +38,15 @@ def f(combined_obs, alpha):
 
 for i in range(count):
 
-    combined_obs = np.vstack((x_obs, t_obs))
+    print("------- sigma = " + str(noise_vals[i]) + " -------")
+    alpha_results = []
+    fail_count = 0
 
-    for j in range(20):
-        noise = np.random.randn(150, )*noise_vals[i]
-        u_ex_data = u_obs + noise
+    for j in range(len(seed_vals)):
+        x_np, t_np, u_np = generate_observations(noise_vals[i], seed_vals[j])
+        combined_obs = np.vstack((x_np, t_np))
 
-        # print(u_obs.min(), u_obs.max())
-        # print(u_ex_data.min(), u_ex_data.max())
-        # SAnity check
-        popt, pcov = curve_fit(f, combined_obs, u_ex_data, p0=[0.5])
+        popt, pcov = curve_fit(f, combined_obs, u_np, p0=[0.5])
         # popt: paramater optimal values - Its an arrys containing the best fit parameters that curve_fit found, values that minimized the sum of squared residuals.
         # For this there is only one unknown alpha = we can pull it out using popt[0]
         # pcov: parameter covariance matrix and that tells us the uncertaintiy of the fitted parameters, basically how conficent the fit is.
@@ -46,37 +56,39 @@ for i in range(count):
         # combined_obs is the single data set of x and t vals that go into the model function to find the true values
         # u_ex_data is the messy data, the made up experimental data that is compared against the model function's data.
         # p0 is the parameter we are nudging (alpha in this case). and we set it to an initial value 0.5 in this case
-        ave_alpha_recovered += popt[0]
+        alpha_recovered = popt[0]
 
-        ave_alpha_stderr += np.sqrt(pcov[0][0])
-        # we sqrt the variance term because variance itself is in squared units
-        #  std deviation = sqrt(variance)
+        if not np.isfinite(alpha_recovered) or alpha_recovered <= 0:
+            print(f"  seed {seed_vals[j]}: FAILED (alpha={alpha_recovered})")
+            fail_count += 1
+            continue
 
-    print("------- sigma = " + str(noise_vals[i]) + " -------")
-    ave_alpha_recovered /= 20
-    ave_alpha_stderr /= 20
+        alpha_results.append(alpha_recovered)
 
-    alpha_error = abs(ave_alpha_recovered - 0.1)
-    error_percentage = (alpha_error/0.1)*100   
-    print("alpha recovered: " + str(ave_alpha_recovered))
-    print("alpha error: " + str(alpha_error))
-    print("Error: " + str(error_percentage) + "%")
-    print(ave_alpha_stderr)
+    alpha_array = np.array(alpha_results)
+    errors_array = np.abs(alpha_array - 0.1)
+
+    mean_alpha = float(alpha_array.mean())
+    std_alpha = float(alpha_array.std())
+    mean_error_pct = float(errors_array.mean() / 0.1 * 100)
+    std_error_pct = float(errors_array.std() / 0.1 * 100)
+
+    print("mean alpha recovered: " + str(mean_alpha))
+    print("mean error: " + str(mean_error_pct) + "%")
     print()
 
     key = f"sigma_{noise_vals[i]}"
     results_dict[key] = {
-        "curve_fit" : {
-            "alpha_recovered": float(ave_alpha_recovered),
-            "error_pct": float(error_percentage),
-            "stderr": float(ave_alpha_stderr)
+        "curve_fit": {
+            "alpha_values": [float(a) for a in alpha_results],
+            "mean_alpha_recovered": mean_alpha,
+            "std_alpha_recovered": std_alpha,
+            "mean_error_pct": mean_error_pct,
+            "std_error_pct": std_error_pct,
+            "fail_count": fail_count,
+            "n_seeds": len(seed_vals)
         }
     }
-    
-    ave_alpha_recovered = 0;
-    ave_alpha_stderr = 0;
-    # resetting values for the next run
-
 
 json_path = "benchmarks/benchmark_inverse.json"
 if os.path.exists(json_path):

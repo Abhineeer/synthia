@@ -6,6 +6,7 @@ from solvers.heat_fd import solve_heat_fd
 import matplotlib.pyplot as plt
 import json
 import os
+import numpy as np
 
 class InPINN(nn.Module):
     def __init__(self, *args, **kwargs):
@@ -86,7 +87,8 @@ interpolator = RegularGridInterpolator((t_in, x_in), u_in)
 # t_in and x_in are the axes and u_in are the plot points
 
 
-def train_inverse_pinn(sigma, seed, n_steps=75000):
+def train_inverse_pinn(sigma, seed, n_steps):
+    torch.manual_seed(seed)
     x_obs = torch.rand(500, 1, device=device)
     t_obs = torch.rand(500, 1, device=device)*T_max
     # ------ We went up form 150 to 250 random points to improve accuracy -------
@@ -113,7 +115,7 @@ def train_inverse_pinn(sigma, seed, n_steps=75000):
     u_ex_data = u_obs + noise
     u_ex_data = u_ex_data.reshape(-1, 1).to(device)
     # We want this to be of shape (150, 1) specifially because loss_data needs it to be, by definition of the function
-    torch.manual_seed(seed)
+    
     model = InPINN().to(device)
     optimizer = optim.Adam(model.parameters(), lr = 0.001)
     alpha_vals = []
@@ -164,34 +166,43 @@ seed_vals = [40, 10, 21, 102, 93]
 sigma_count = len(sigma_vals)
 seed_count = len(seed_vals)
 results_dict = {}
-ave_alpha_recovered = 0
 
 for i in range(sigma_count):
     print("------- sigma = " + str(sigma_vals[i]) + " -------")
+    alpha_results = []
 
     for j in range(seed_count):
-        alpha_recovered = train_inverse_pinn(sigma_vals[i], seed_vals[j], 75000)
+        alpha_recovered = train_inverse_pinn(sigma_vals[i], seed_vals[j], 100000)
         print(f"  seed {seed_vals[j]}: alpha_recovered = {alpha_recovered}")
-        ave_alpha_recovered += alpha_recovered
+        alpha_results.append(alpha_recovered)
 
-    ave_alpha_recovered /= seed_count
+    alpha_array = np.array(alpha_results)
+    errors_array = np.abs(alpha_array - 0.1)
 
-    error = abs(ave_alpha_recovered - 0.1)
-    error_percentage = (error / 0.1) * 100
-    print("alpha recovered: " + str(ave_alpha_recovered))
-    print("error: " + str(error_percentage) + "%")
+    mean_alpha = float(alpha_array.mean())
+    std_alpha = float(alpha_array.std())
+
+    mean_error = float(errors_array.mean())
+    std_error = float(errors_array.std())
+
+    mean_error_pct = mean_error / 0.1 * 100
+    std_error_pct = std_error / 0.1 * 100
+
+    print("mean alpha recovered: " + str(mean_alpha))
+    print("mean error: " + str(mean_error_pct) + "%")
+    print("std error: " + str(std_error_pct) + "%")
     print()
 
     key = f"sigma_{sigma_vals[i]}"
     results_dict[key] = {
         "inverse_pinn" : {
-            "alpha_recovered": float(ave_alpha_recovered),
-            "error_pct": float(error_percentage)
+            "alpha_values": [float(a) for a in alpha_results],
+            "mean_alpha_recovered": mean_alpha,
+            "std_alpha_recovered": std_alpha,
+            "mean_error_pct": mean_error_pct,
+            "std_error_pct": std_error_pct
         }
     }
-
-    ave_alpha_recovered = 0
-    # resetting
 
 
 json_path = "benchmarks/benchmark_inverse.json"
