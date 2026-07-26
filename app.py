@@ -35,16 +35,40 @@ def fd_solve(alpha, nx=100, t_max=t_max):
     return solve_heat_fd(alpha, nx, n_t)
 
 
-st.title("SYNTHIA — PINN for the 1D Heat Equation")
+st.markdown(
+"""<h1 style="margin-bottom:0;">SYNTHIA</h1>
+<h3 style="margin-top:-25px;">PINN for the 1D Heat Equation</h3>"""
+,unsafe_allow_html=True
+)
+
+st.markdown(
+    """
+    <a href="https://github.com/Abhineeer/synthia" target="_blank"
+       style="
+           display: inline-flex;
+           align-items: center;
+           gap: 6px;
+           padding: 6px 14px;
+           background-color: #181717;
+           color: #ffffff;
+           border-radius: 6px;
+           text-decoration: none;
+           font-size: 13px;
+           font-weight: 600;
+           margin-top: 4px;
+       ">
+       ⚙ SYNTHIA on GitHub
+    </a>
+    """,
+    unsafe_allow_html=True
+)
+
 tab1, tab2 = st.tabs(["Forward Solver", "Parameter Recovery"])
 
 with tab1:
     st.subheader("Forward Solver")
     st.write(
-        "A metal rod starts hot in the middle and cold at both ends, which are "
-        "held at 0°C. Heat spreads outward and the rod cools toward zero. The "
-        "slider sets the thermal diffusivity α — how fast heat moves through "
-        "the material. Higher α, faster the rod settles."
+        "A metal rod starts hot in the middle and cold at both ends, which are locked at 0°C. Heat spreads outward from the peak and the rod cools toward zero. The slider down below sets the thermal diffusivity α. It dictates how fast heat moves through the material. Higher the α, quicker the rod temperature settles."
     ) # explainer for non physicist viewers
 
     # --- PANEL A: slider-driven FD heatmap ---
@@ -57,19 +81,36 @@ with tab1:
     u_plot, t_plot = u[::stride], t[::stride]
 
     fig = go.Figure(
-        data=go.Heatmap(
-            z=u_plot, x=x, y=t_plot,
-            colorscale="Inferno", zmin=0, zmax=1,
-            colorbar=dict(title="u (temp)"),
-        )
+    data=go.Heatmap(
+        z=u_plot, x=x, y=t_plot,
+        colorscale="Viridis", zmin=0, zmax=1,
+        colorbar=dict(
+        title=dict(text="temp u", font=dict(size=13, weight="bold"), side="top"),
+        thickness=40,
+        len=1.054,
+    ),
+        hovertemplate="x: %{x:.3f}<br>t: %{y:.3f}<br>u: %{z:.3f}<extra></extra>"
     )
+    )
+
     fig.update_layout(
-        xaxis_title="position x",
-        yaxis_title="time t",
+        xaxis_title=dict(text="position x", font=dict(size=13, weight="bold")),
+        yaxis_title=dict(text="time t", font=dict(size=13, weight="bold")),
         height=420,
         margin=dict(l=60, r=20, t=30, b=50),
     )
     st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("More information"):
+        st.write("The forward solver integrates the 1D heat equation:")
+        st.latex(r"\frac{\partial u}{\partial t} = \alpha \frac{\partial^2 u}{\partial x^2}")
+        st.write("with boundary and initial conditions:")
+        st.latex(r"u(0,t) = u(1,t) = 0, \qquad u(x,0) = \sin(\pi x)")
+        st.write("discretized with an explicit finite-difference scheme:")
+        st.latex(
+            r"u_i^{n+1} = u_i^n + \alpha \frac{\Delta t}{\Delta x^2}"
+            r"\left(u_{i+1}^n - 2u_i^n + u_{i-1}^n\right)"
+        )
 
     st.caption(
         f"α = {alpha} · {len(t)} timesteps to t = {t_max} · "
@@ -92,11 +133,9 @@ with tab1:
     print(output_np.shape)
     print(output_np[50])
 
-    st.subheader("Validation — is the PINN trustworthy?")
+    st.subheader("Validation: Is the PINN trustworthy?")
     st.write(
-        "The PINN was trained at α = 0.1. Here its prediction is checked "
-        "against the classical finite-difference solver at the same α, "
-        "at the midpoint in time (t = 0.5)."
+        "A PINN's accuracy isn't guaranteed by design, unlike the finite-difference solver, it never sees the governing equation solved directly, only learns to satisfy it through training. This panel is the proof: the network's own prediction, checked point-by-point against the classical solver (above) it was never shown. If the two curves overlap, the PINN has genuinely learned the physics, not just memorized an approximate shape."
     )
 
     # FD solution at the exact same setup the PINN was trained on
@@ -108,12 +147,13 @@ with tab1:
 
     fig2 = go.Figure()
     fig2.add_trace(go.Scatter(x=x_fd, y=u_fd_at_05, mode="lines",
-                               name="FD solver", line=dict(width=3)))
+                           name="FD solver", line=dict(width=3, color="#41b9ff")))
     fig2.add_trace(go.Scatter(x=x_05, y=output_np, mode="lines",
-                               name="PINN", line=dict(width=2, dash="dot")))
+                           name="PINN", line=dict(width=2, dash="dot",color="#000000")))
     fig2.update_layout(
-        xaxis_title="position x",
-        yaxis_title="u (temperature)",
+        xaxis_title=dict(text="position x", font=dict(size=13, weight="bold")),
+        yaxis_title=dict(text="u (temperature)", font=dict(size=13, weight="bold")),
+        legend=dict(font=dict(size=14, weight="bold")),
         height=380,
         margin=dict(l=60, r=20, t=30, b=50),
     )
@@ -121,9 +161,20 @@ with tab1:
 
     benchmarks = load_benchmarks()
     col1, col2 = st.columns(2)
-    col1.metric("Relative L2 error vs FD", f"{benchmarks['rel_l2_vs_fd']['t_0.5']*100:.2f}%")
-    col2.metric("Inference speedup vs FD", f"{benchmarks['speedup_pinn_vs_fd']:.1f}×")
-
+    with col1:
+        st.markdown(
+            f"<div style='text-align:center;'>"
+            f"<div style='font-size:13px;color:gray;'>Relative L2 error vs FD</div>"
+            f"<div style='font-size:38px;font-weight:500;'>{benchmarks['rel_l2_vs_fd']['t_0.5']*100:.2f}%</div>"
+            f"</div>", unsafe_allow_html=True
+        )
+    with col2:
+        st.markdown(
+            f"<div style='text-align:center;'>"
+            f"<div style='font-size:13px;color:gray;'>Inference speedup vs FD</div>"
+            f"<div style='font-size:38px;font-weight:500;'>{benchmarks['speedup_pinn_vs_fd']:.1f}×</div>"
+            f"</div>", unsafe_allow_html=True
+        )
 with tab2:
     st.info("Parameter recovery results coming soon.")
     # later: read benchmark_inverse.json, render method × noise × error
