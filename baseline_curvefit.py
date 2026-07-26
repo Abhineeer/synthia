@@ -25,7 +25,7 @@ def generate_observations(sigma, seed):
     return x_obs.numpy().flatten(), t_obs.numpy().flatten(), u_ex_data.numpy().flatten()
 
 noise_vals = [0.01, 0.05, 0.1, 0.2]
-seed_vals = [40, 10, 21, 102, 93]
+seed_vals = [40, 10, 21, 15, 93]
 count = len(noise_vals)
 
 results_dict = {}

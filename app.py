@@ -182,7 +182,7 @@ with tab2:
     Imagine you have a metal rod and a few scattered, imperfect temperature
     readings taken over time, like a handful of noisy sensor measurements,
     not a full picture. Can you work backward from those readings to figure
-    out *how fast heat moves through the material* — a property called
+    out *how fast heat moves through the material*, a property called
     **thermal diffusivity (α)**? This tab compares two ways of solving that
     problem: a classical curve-fitting method, and a physics-informed neural
     network that uses the heat equation itself as a constraint. Adjust the
@@ -192,7 +192,7 @@ with tab2:
     st.markdown("")
     st.markdown("")
 
-    with open("benchmarks/benchmark_inverse.json") as f:
+    with open("benchmarks/benchmark_inverse_final.json") as f:
         inverse_data = json.load(f)
 
     sigma_options = [0.01, 0.05, 0.1, 0.2]
@@ -206,6 +206,55 @@ with tab2:
 
     pinn_result = inverse_data[sigma_key].get("inverse_pinn")
     curvefit_result = inverse_data[sigma_key].get("curve_fit")
+
+    sigma_options_valid = []
+    curvefit_errors = []
+    pinn_errors = []
+
+    for s in sigma_options:
+        key = f"sigma_{s}"
+        cf = inverse_data.get(key, {}).get("curve_fit")
+        pn = inverse_data.get(key, {}).get("inverse_pinn")
+
+        if cf is None:
+            continue
+
+        sigma_options_valid.append(s)
+        curvefit_errors.append(cf["mean_error_pct"])
+
+        if pn is not None and "mean_error_pct" in pn:
+            pinn_errors.append(pn["mean_error_pct"])
+        else:
+            pinn_errors.append(None)
+
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatter(
+            x=sigma_options_valid,
+            y=curvefit_errors,
+            mode="lines+markers",
+            name="curve_fit",
+            line=dict(color="#4488ff")
+        ))
+    
+    if any(e is not None for e in pinn_errors):
+            fig.add_trace(go.Scatter(
+                x=sigma_options_valid,
+                y=pinn_errors,
+                mode="lines+markers",
+                name="PINN",
+                line=dict(color="#00d4aa")
+            ))
+    
+    fig.add_vline(x=selected_sigma, line_dash="dash", line_color="gray")
+    
+    fig.update_layout(
+            xaxis_title="Noise level (σ)",
+            yaxis_title="Mean recovery error (%)",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02)
+        )
+    
+    st.plotly_chart(fig, use_container_width=True)
 
     pinn_ready = pinn_result is not None and "mean_alpha_recovered" in pinn_result
 
@@ -231,51 +280,9 @@ with tab2:
             f"{curvefit_result['mean_error_pct']:.1f}% error"
         )
 
-    sigma_options_valid = []
-    curvefit_errors = []
-    pinn_errors = []
-
-    for s in sigma_options:
-        key = f"sigma_{s}"
-        cf = inverse_data.get(key, {}).get("curve_fit")
-        pn = inverse_data.get(key, {}).get("inverse_pinn")
-
-        if cf is None:
-            continue
-
-        sigma_options_valid.append(s)
-        curvefit_errors.append(cf["mean_error_pct"])
-
-        if pn is not None and "mean_error_pct" in pn:
-            pinn_errors.append(pn["mean_error_pct"])
-        else:
-            pinn_errors.append(None)
-
-    fig = go.Figure()
-
-    fig.add_trace(go.Scatter(
-        x=sigma_options_valid,
-        y=curvefit_errors,
-        mode="lines+markers",
-        name="curve_fit",
-        line=dict(color="#4488ff")
-    ))
-
-    if any(e is not None for e in pinn_errors):
-        fig.add_trace(go.Scatter(
-            x=sigma_options_valid,
-            y=pinn_errors,
-            mode="lines+markers",
-            name="PINN",
-            line=dict(color="#00d4aa")
-        ))
-
-    fig.add_vline(x=selected_sigma, line_dash="dash", line_color="gray")
-
-    fig.update_layout(
-        xaxis_title="Noise level (σ)",
-        yaxis_title="Mean recovery error (%)",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02)
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+    if pinn_ready:
+        st.caption(
+            f"Across {pinn_result.get('n_seeds', len(pinn_result.get('alpha_values', [])))} independent training runs at this noise level, "
+            f"recovered α had a standard deviation of {pinn_result['std_alpha_recovered']:.4f} "
+            f"({pinn_result['std_error_pct']:.1f}% of true α)."
+        )

@@ -162,7 +162,8 @@ def train_inverse_pinn(sigma, seed, n_steps):
 
 
 sigma_vals = [0.01, 0.05, 0.1, 0.2]
-seed_vals = [40, 10, 21, 102, 93]
+# seed_vals = [40, 10, 21, 102, 93]
+seed_vals = [15]
 sigma_count = len(sigma_vals)
 seed_count = len(seed_vals)
 results_dict = {}

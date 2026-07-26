@@ -3,6 +3,7 @@ import numpy as np
 import pinn
 import matplotlib.pyplot as plt
 import json
+import os
 
 x = np.linspace(0, 1, 50)
 t = np.linspace(0, 1, 50)
@@ -81,6 +82,8 @@ ax.set_title('MC Dropout Uncertainty — Full (x,t) Domain')
 plt.savefig('figures/fig_uncertainty.png', dpi=300, bbox_inches='tight')
 # DPI: dots per inch, measures the spatial resolution and pixel density of the saved image
 
+json_path = "benchmarks/benchmarks_uncertainty.json"
+
 results_dict = {
     "Mean uncertainty across the domain": float(std_mean),
     "Max uncertainty across the domain": float(std_max),
@@ -89,8 +92,13 @@ results_dict = {
     "Uncertainty at max gradient of temperature" : float(uncertainty_max_tempgrad)
 }
 
-with open("benchmarks/benchmark_phase2.json", "r") as f:
-    data = json.load(f)
-data.update(results_dict)
-with open("benchmarks/benchmark_phase2.json", "w") as f:
+if os.path.exists(json_path):
+    with open(json_path, "r") as f:
+        data = json.load(f)
+else:
+    data = {}
+
+data["forward_uncertainty"] = results_dict
+
+with open(json_path, "w") as f:
     json.dump(data, f, indent=4)
