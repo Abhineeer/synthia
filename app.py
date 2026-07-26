@@ -188,3 +188,94 @@ with tab2:
     network that uses the heat equation itself as a constraint. Adjust the
     noise slider below to see how each method holds up as the data gets messier.
     """)
+    st.markdown("")
+    st.markdown("")
+    st.markdown("")
+
+    with open("benchmarks/benchmark_inverse.json") as f:
+        inverse_data = json.load(f)
+
+    sigma_options = [0.01, 0.05, 0.1, 0.2]
+    # fixed sigma (noise) values
+    selected_sigma = st.select_slider(
+        "Noise level (σ)",
+        options=sigma_options,
+        value=0.05
+    )
+    sigma_key = f"sigma_{selected_sigma}"
+
+    pinn_result = inverse_data[sigma_key].get("inverse_pinn")
+    curvefit_result = inverse_data[sigma_key].get("curve_fit")
+
+    pinn_ready = pinn_result is not None and "mean_alpha_recovered" in pinn_result
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("True α", "0.100")
+
+    with col2:
+        if pinn_ready:
+            st.metric(
+                "PINN recovered α",
+                f"{pinn_result['mean_alpha_recovered']:.4f}",
+                f"{pinn_result['mean_error_pct']:.1f}% error"
+            )
+        else:
+            st.metric("PINN recovered α", "pending")
+
+    with col3:
+        st.metric(
+            "curve_fit recovered α",
+            f"{curvefit_result['mean_alpha_recovered']:.4f}",
+            f"{curvefit_result['mean_error_pct']:.1f}% error"
+        )
+
+    sigma_options_valid = []
+    curvefit_errors = []
+    pinn_errors = []
+
+    for s in sigma_options:
+        key = f"sigma_{s}"
+        cf = inverse_data.get(key, {}).get("curve_fit")
+        pn = inverse_data.get(key, {}).get("inverse_pinn")
+
+        if cf is None:
+            continue
+
+        sigma_options_valid.append(s)
+        curvefit_errors.append(cf["mean_error_pct"])
+
+        if pn is not None and "mean_error_pct" in pn:
+            pinn_errors.append(pn["mean_error_pct"])
+        else:
+            pinn_errors.append(None)
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=sigma_options_valid,
+        y=curvefit_errors,
+        mode="lines+markers",
+        name="curve_fit",
+        line=dict(color="#4488ff")
+    ))
+
+    if any(e is not None for e in pinn_errors):
+        fig.add_trace(go.Scatter(
+            x=sigma_options_valid,
+            y=pinn_errors,
+            mode="lines+markers",
+            name="PINN",
+            line=dict(color="#00d4aa")
+        ))
+
+    fig.add_vline(x=selected_sigma, line_dash="dash", line_color="gray")
+
+    fig.update_layout(
+        xaxis_title="Noise level (σ)",
+        yaxis_title="Mean recovery error (%)",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02)
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
