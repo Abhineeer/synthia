@@ -6,8 +6,157 @@ from pinn import PINN
 from solvers.heat_fd import solve_heat_fd
 import plotly.graph_objects as go
 
+st.set_page_config(
+    page_title="SYNTHIA: PINN for the 1D Heat Equation",
+    page_icon="🌡️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
 t_max = 1.0
 # This is the universal end time t = 1
+
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,900&family=JetBrains+Mono:wght@300;400;500;600&display=swap');
+
+    :root {
+        --bg: #0b0807;
+        --surface: #151010;
+        --hot: #f77f00;
+        --peak: #ffc94a;
+    }
+
+    [data-testid="stHeader"] {
+        background: var(--bg);
+    }
+
+    .stApp {
+        background: var(--bg);
+        color: #ece4d6;
+    }
+
+    h1, h2, h3, h4, h5 {
+        font-family: 'Fraunces', serif !important;
+        color: #f8f1e3 !important;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 4px;
+        border-bottom: 1px solid #2b2119;
+    }
+    .stTabs [data-baseweb="tab"] {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: #8a7f6f;
+        background: transparent;
+        padding: 10px 18px;
+    }
+    .stTabs [aria-selected="true"] {
+        color: var(--peak) !important;
+        border-bottom: 2px solid var(--hot) !important;
+    }
+
+    [data-testid="stSidebar"] {
+        background: var(--surface);
+        border-right: 1px solid #2b2119;
+    }
+    [data-testid="stSidebar"] * { color: #ece4d6 !important; }
+
+    p, li, .stMarkdown, label { color: #8a7f6f !important; }
+
+    .block-container { padding-top: 2.5rem; max-width: 1100px; }
+
+    [data-testid="stMetric"] {
+        background: #1c1613;
+        border: 1px solid #2b2119;
+        border-left: 3px solid var(--hot);
+        padding: 14px 18px;
+        border-radius: 4px;
+    }
+    [data-testid="stMetricLabel"] {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 10px !important;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: #8a7f6f !important;
+    }
+    [data-testid="stMetricValue"] {
+        font-family: 'Fraunces', serif !important;
+        color: var(--peak) !important;
+    }
+
+    .stSlider [data-baseweb="slider"] > div > div { background: var(--hot) !important; }
+
+    [data-testid="stExpander"] {
+        background: #1c1613;
+        border: 1px solid #2b2119 !important;
+        border-radius: 4px;
+    }
+
+    .stCaption, [data-testid="stCaptionContainer"] {
+        font-family: 'JetBrains Mono', monospace !important;
+        font-size: 11px !important;
+        color: #8a7f6f !important;
+    }
+
+    hr { border-color: #2b2119 !important; }
+
+    .synthia-eyebrow {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        letter-spacing: 4px;
+        color: var(--hot);
+        text-transform: uppercase;
+        margin-bottom: 4px;
+    }
+    .synthia-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        background: #1c1613;
+        border: 1px solid #2b2119;
+        color: #ece4d6 !important;
+        border-radius: 6px;
+        text-decoration: none;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+    }
+    .synthia-badge:hover { border-color: var(--hot); }
+
+    .synthia-card {
+        background: #1c1613;
+        border: 1px solid #2b2119;
+        border-left: 3px solid #2ec4b6;
+        padding: 16px 20px;
+        border-radius: 4px;
+        margin: 14px 0;
+        font-size: 14px;
+        line-height: 1.7;
+        color: #8a7f6f;
+    }
+    .synthia-footer {
+        margin-top: 48px;
+        padding-top: 20px;
+        border-top: 1px solid #2b2119;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10.5px;
+        color: #8a7f6f;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .synthia-footer a { color: var(--peak); text-decoration: none; }
+
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
 @st.cache_resource
@@ -35,32 +184,16 @@ def fd_solve(alpha, nx=100, t_max=t_max):
     return solve_heat_fd(alpha, nx, n_t)
 
 
+st.markdown('<div class="synthia-eyebrow">Physics-Informed Neural Network · 1D Heat Equation</div>', unsafe_allow_html=True)
 st.markdown(
-"""<h1 style="margin-bottom:0;">SYNTHIA</h1>
-<h3 style="margin-top:-25px;">PINN for the 1D Heat Equation</h3>"""
-,unsafe_allow_html=True
-)
-
-st.markdown(
-    """
-    <a href="https://github.com/Abhineeer/synthia" target="_blank"
-       style="
-           display: inline-flex;
-           align-items: center;
-           gap: 6px;
-           padding: 6px 14px;
-           background-color: #181717;
-           color: #ffffff;
-           border-radius: 6px;
-           text-decoration: none;
-           font-size: 13px;
-           font-weight: 600;
-           margin-top: 4px;
-       ">
-       ⚙ SYNTHIA on GitHub
-    </a>
-    """,
-    unsafe_allow_html=True
+    """<h1 style="margin-bottom:0; font-size:56px;">SYNTHIA</h1>
+    <p style="font-style:italic; color:#a89c8a; max-width:640px; margin-top:6px;
+       border-left:2px solid var(--hot); padding-left:16px;">
+       A neural network trained to obey the heat equation, not memorize its solution,
+       forward-solved, benchmarked against a classical solver, and inverted to recover
+       an unknown physical parameter from noisy data.
+    </p>"""
+    ,unsafe_allow_html=True
 )
 
 tab1, tab2 = st.tabs(["Forward Solver", "Parameter Recovery"])
@@ -85,7 +218,7 @@ with tab1:
         z=u_plot, x=x, y=t_plot,
         colorscale="Viridis", zmin=0, zmax=1,
         colorbar=dict(
-        title=dict(text="temp u", font=dict(size=13, weight="bold"), side="top"),
+        title=dict(text="temp u", font=dict(size=13, weight="bold", color="#ece4d6"), side="top"),
         thickness=40,
         len=1.054,
     ),
@@ -98,6 +231,9 @@ with tab1:
         yaxis_title=dict(text="time t", font=dict(size=13, weight="bold")),
         height=420,
         margin=dict(l=60, r=20, t=30, b=50),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#ece4d6"),
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -147,19 +283,47 @@ with tab1:
 
     fig2 = go.Figure()
     fig2.add_trace(go.Scatter(x=x_fd, y=u_fd_at_05, mode="lines",
-                           name="FD solver", line=dict(width=3, color="#41b9ff")))
+                           name="FD solver", line=dict(width=3, color="#2ec4b6")))
     fig2.add_trace(go.Scatter(x=x_05, y=output_np, mode="lines",
-                           name="PINN", line=dict(width=2, dash="dot",color="#000000")))
+                           name="PINN", line=dict(width=2, dash="dot",color="#ffc94a")))
     fig2.update_layout(
         xaxis_title=dict(text="position x", font=dict(size=13, weight="bold")),
         yaxis_title=dict(text="u (temperature)", font=dict(size=13, weight="bold")),
-        legend=dict(font=dict(size=14, weight="bold")),
+        legend=dict(font=dict(size=14, weight="bold", color="#ece4d6")),
         height=380,
         margin=dict(l=60, r=20, t=30, b=50),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#ece4d6"),
     )
     st.plotly_chart(fig2, width='stretch')
 
     benchmarks = load_benchmarks()
+
+    with st.sidebar:
+        st.markdown('<div class="synthia-eyebrow">SYNTHIA Dashboard</div>', unsafe_allow_html=True)
+        st.markdown("---")
+        st.metric("Forward L2 (vs FD, t=0.5)", f"{benchmarks['rel_l2_vs_fd']['t_0.5']*100:.2f}%")
+        st.metric("Inference speedup", f"{benchmarks['speedup_pinn_vs_fd']:.1f}×")
+
+        st.markdown("---")
+        st.markdown(
+            '<div class="synthia-card">'
+            '<strong style="color:var(--text)">Method</strong><br>'
+            'Trained on a physics residual loss at random collocation points, '
+            'no solution data. Validated against an independent finite-difference '
+            'solver never shown to the network during training.'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("---")
+        st.markdown(
+            '<a href="https://github.com/Abhineeer/synthia" target="_blank" class="synthia-badge">'
+            '⚙ SYNTHIA on GitHub</a>',
+            unsafe_allow_html=True,
+        )
+
     col1, col2 = st.columns(2)
     with col1:
         st.markdown(
@@ -234,7 +398,7 @@ with tab2:
             y=curvefit_errors,
             mode="lines+markers",
             name="curve_fit",
-            line=dict(color="#4488ff")
+            line=dict(color="#7a5bc2")
         ))
     
     if any(e is not None for e in pinn_errors):
@@ -243,7 +407,7 @@ with tab2:
                 y=pinn_errors,
                 mode="lines+markers",
                 name="PINN",
-                line=dict(color="#00d4aa")
+                line=dict(color="#ffc94a")
             ))
     
     fig.add_vline(x=selected_sigma, line_dash="dash", line_color="gray")
@@ -251,7 +415,10 @@ with tab2:
     fig.update_layout(
             xaxis_title="Noise level (σ)",
             yaxis_title="Mean recovery error (%)",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02)
+            legend=dict(orientation="h", yanchor="bottom", y=1.02,font=dict(color="#ece4d6")),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(color="#ece4d6"),
         )
     
     st.plotly_chart(fig, use_container_width=True)
@@ -286,3 +453,13 @@ with tab2:
             f"recovered α had a standard deviation of {pinn_result['std_alpha_recovered']:.4f} "
             f"({pinn_result['std_error_pct']:.1f}% of true α)."
         )
+
+st.markdown(
+    """
+    <div class="synthia-footer">
+        <span>SYNTHIA · Adii Singh · ASU Applied Physics + Computer Science</span>
+        <a href="https://github.com/Abhineeer/synthia" target="_blank">github.com/Abhineeer/synthia</a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
