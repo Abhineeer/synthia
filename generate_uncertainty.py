@@ -4,6 +4,12 @@ import pinn
 import matplotlib.pyplot as plt
 import json
 import os
+from matplotlib.colors import LinearSegmentedColormap
+
+synthia_cmap = LinearSegmentedColormap.from_list(
+    "synthia_thermal",
+    ["#151010", "#5b3a9e", "#d1495b", "#f77f00", "#ffc94a"]
+)
 
 x = np.linspace(0, 1, 50)
 t = np.linspace(0, 1, 50)
@@ -65,19 +71,26 @@ t_max_grad = t[row2]
 uncertainty_max_tempgrad = std_grid[row2, col2]
 # given the coordinates from above - we are finding the uncertainty at that point
 fig, ax = plt.subplots(figsize=(8, 6))
+fig.patch.set_facecolor('#151010')
+ax.set_facecolor('#151010')
 
-im = ax.imshow(std_grid, origin='lower', aspect='auto', extent=[0,1,0,1], cmap='hot')
+im = ax.imshow(std_grid, origin='lower', aspect='auto', extent=[0,1,0,1], cmap=synthia_cmap)
 # The line above displays a 2D array as an image
 # ax is an Axes object and imshow means image show
 # cmap controls teh color
-plt.colorbar(im, ax=ax, label='Uncertainty (std)')
+cbar = plt.colorbar(im, ax=ax, label='Uncertainty (std)')
+cbar.ax.yaxis.set_tick_params(color='#8a7f6f')
+plt.setp(plt.getp(cbar.ax.axes, 'yticklabels'), color='#ece4d6')
+cbar.set_label('Uncertainty (std)', color='#f8f1e3')
+cbar.outline.set_edgecolor('#2b2119')
 
 contours = ax.contour(X, T, mean_grid, levels=10, colors='white', linewidths=0.8)
 ax.clabel(contours, inline=True, fontsize=7)
 
-ax.set_xlabel('x (position)')
-ax.set_ylabel('t (time)')
-ax.set_title('MC Dropout Uncertainty — Full (x,t) Domain')
+ax.set_xlabel('x (position)', color='#ece4d6')
+ax.set_ylabel('t (time)', color='#ece4d6')
+ax.set_title('MC Dropout Uncertainty: Full (x,t) Domain', color='#f8f1e3')
+ax.tick_params(colors='#8a7f6f')
 
 plt.savefig('figures/fig_uncertainty.png', dpi=300, bbox_inches='tight')
 # DPI: dots per inch, measures the spatial resolution and pixel density of the saved image

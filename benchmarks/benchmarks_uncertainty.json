@@ -1,15 +1,15 @@
 {
     "forward_uncertainty": {
-        "Mean uncertainty across the domain": 0.05298526585102081,
-        "Max uncertainty across the domain": 0.08570677042007446,
+        "Mean uncertainty across the domain": 0.052961353212594986,
+        "Max uncertainty across the domain": 0.0826626867055893,
         "Max uncertainty co-ordinates": {
-            "x": 0.4693877551020408,
-            "t": 0.14285714285714285
+            "x": 0.5306122448979591,
+            "t": 0.02040816326530612
         },
         "Max gradient of temperature": {
             "x": 1.0,
-            "t": 0.02040816326530612
+            "t": 0.0
         },
-        "Uncertainty at max gradient of temperature": 0.04166625067591667
+        "Uncertainty at max gradient of temperature": 0.03733798488974571
     }
 }

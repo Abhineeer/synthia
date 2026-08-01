@@ -74,27 +74,38 @@ st.markdown(
         background: #1c1613;
         border: 1px solid #2b2119;
         border-left: 3px solid var(--hot);
-        padding: 14px 18px;
+        padding: 18px 22px;
         border-radius: 4px;
+        min-height: 141px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
     }
     [data-testid="stMetricLabel"] {
         font-family: 'JetBrains Mono', monospace !important;
         font-size: 10px !important;
         letter-spacing: 2px;
-        text-transform: uppercase;
         color: #8a7f6f !important;
     }
-    [data-testid="stMetricValue"] {
+    [data-testid="stMetricValue"], [data-testid="stMetricValue"] * {
+        color: #f8f1e3 !important;
         font-family: 'Fraunces', serif !important;
-        color: var(--peak) !important;
+        font-size: 2.4rem !important;
+        font-weight: 700 !important;
     }
-
     .stSlider [data-baseweb="slider"] > div > div { background: var(--hot) !important; }
 
     [data-testid="stExpander"] {
         background: #1c1613;
         border: 1px solid #2b2119 !important;
         border-radius: 4px;
+    }
+
+    [data-testid="stMetricDelta"] {
+        color: var(--teal) !important;
+    }
+    [data-testid="stMetricDelta"] svg {
+        display: none;
     }
 
     .stCaption, [data-testid="stCaptionContainer"] {
@@ -183,6 +194,11 @@ def fd_solve(alpha, nx=100, t_max=t_max):
     n_t = int(t_max / dt)
     return solve_heat_fd(alpha, nx, n_t)
 
+@st.cache_data
+def load_uncertainty():
+    with open('benchmarks/benchmarks_uncertainty.json') as f:
+        return json.load(f)['forward_uncertainty']
+
 
 st.markdown('<div class="synthia-eyebrow">Physics-Informed Neural Network · 1D Heat Equation</div>', unsafe_allow_html=True)
 st.markdown(
@@ -196,7 +212,7 @@ st.markdown(
     ,unsafe_allow_html=True
 )
 
-tab1, tab2 = st.tabs(["Forward Solver", "Parameter Recovery"])
+tab1, tab2, tab3 = st.tabs(["Forward Solver", "Parameter Recovery", "Uncertainty Quantification"])
 
 with tab1:
     st.subheader("Forward Solver")
@@ -301,18 +317,41 @@ with tab1:
     benchmarks = load_benchmarks()
 
     with st.sidebar:
-        st.markdown('<div class="synthia-eyebrow">SYNTHIA Dashboard</div>', unsafe_allow_html=True)
-        st.markdown("---")
-        st.metric("Forward L2 (vs FD, t=0.5)", f"{benchmarks['rel_l2_vs_fd']['t_0.5']*100:.2f}%")
-        st.metric("Inference speedup", f"{benchmarks['speedup_pinn_vs_fd']:.1f}×")
+        st.markdown('<div class="synthia-eyebrow">Reference Library</div>', unsafe_allow_html=True)
+        st.markdown("### SYNTHIA")
+        st.caption("Physics-informed neural network")
 
         st.markdown("---")
+
         st.markdown(
             '<div class="synthia-card">'
-            '<strong style="color:var(--text)">Method</strong><br>'
-            'Trained on a physics residual loss at random collocation points, '
-            'no solution data. Validated against an independent finite-difference '
-            'solver never shown to the network during training.'
+            '<strong style="color:var(--text)">Forward Solver</strong><br>'
+            'Network trained on a physics residual loss at random collocation points — '
+            'no solution data given directly. Validated against an independently-built '
+            'finite-difference solver.<br>'
+            '<a href="https://arxiv.org/abs/1711.10561" target="_blank" style="color:var(--peak);">'
+            'Raissi et al., 2019 ↗</a>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            '<div class="synthia-card">'
+            '<strong style="color:var(--text)">Parameter Recovery</strong><br>'
+            'α made a learnable nn.Parameter, recovered from 150–500 sparse, noisy '
+            'observations. Benchmarked against scipy.optimize.curve_fit across four '
+            'noise levels and multiple seeds.'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            '<div class="synthia-card">'
+            '<strong style="color:var(--text)">Uncertainty Quantification</strong><br>'
+            'Dropout kept active at inference — 200 passes approximate a Bayesian '
+            'posterior over predictions.<br>'
+            '<a href="https://arxiv.org/abs/1506.02142" target="_blank" style="color:var(--peak);">'
+            'Gal &amp; Ghahramani, 2016 ↗</a>'
             '</div>',
             unsafe_allow_html=True,
         )
@@ -326,23 +365,12 @@ with tab1:
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown(
-            f"<div style='text-align:center;'>"
-            f"<div style='font-size:13px;color:gray;'>Relative L2 error vs FD</div>"
-            f"<div style='font-size:38px;font-weight:500;'>{benchmarks['rel_l2_vs_fd']['t_0.5']*100:.2f}%</div>"
-            f"</div>", unsafe_allow_html=True
-        )
+        st.metric("Relative L2 error vs FD", f"{benchmarks['rel_l2_vs_fd']['t_0.5']*100:.2f}%")
     with col2:
-        st.markdown(
-            f"<div style='text-align:center;'>"
-            f"<div style='font-size:13px;color:gray;'>Inference speedup vs FD</div>"
-            f"<div style='font-size:38px;font-weight:500;'>{benchmarks['speedup_pinn_vs_fd']:.1f}×</div>"
-            f"</div>", unsafe_allow_html=True
-        )
+        st.metric("Inference speedup vs FD", f"{benchmarks['speedup_pinn_vs_fd']:.1f}×")
 with tab2:
+    st.subheader("Recovering hidden physics from noisy data")
     st.markdown("""
-    ##### Recovering hidden physics from noisy data
-
     Imagine you have a metal rod and a few scattered, imperfect temperature
     readings taken over time, like a handful of noisy sensor measurements,
     not a full picture. Can you work backward from those readings to figure
@@ -428,21 +456,21 @@ with tab2:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("True α", "0.100")
+        st.metric("TRUE \u03b1", "0.100")
 
     with col2:
         if pinn_ready:
             st.metric(
-                "PINN recovered α",
+                "PINN RECOVERED \u03b1",
                 f"{pinn_result['mean_alpha_recovered']:.4f}",
                 f"{pinn_result['mean_error_pct']:.1f}% error"
             )
         else:
-            st.metric("PINN recovered α", "pending")
+            st.metric("PINN recovered \u03b1", "pending")
 
     with col3:
         st.metric(
-            "curve_fit recovered α",
+            "CURVE_FIT RECOVERED \u03b1",
             f"{curvefit_result['mean_alpha_recovered']:.4f}",
             f"{curvefit_result['mean_error_pct']:.1f}% error"
         )
@@ -450,9 +478,45 @@ with tab2:
     if pinn_ready:
         st.caption(
             f"Across {pinn_result.get('n_seeds', len(pinn_result.get('alpha_values', [])))} independent training runs at this noise level, "
-            f"recovered α had a standard deviation of {pinn_result['std_alpha_recovered']:.4f} "
+            f"recovered \u03b1 had a standard deviation of {pinn_result['std_alpha_recovered']:.4f} "
             f"({pinn_result['std_error_pct']:.1f}% of true α)."
         )
+
+with tab3:
+    st.subheader("Uncertainty Quantification")
+    st.write(
+        "Dropout stays active at inference instead of being switched off — 200 forward "
+        "passes per point, and the spread across those passes approximates a Bayesian "
+        "posterior over the network's predictions "
+        "([Gal & Ghahramani, 2016](https://arxiv.org/abs/1506.02142))."
+    )
+
+    unc = load_uncertainty()
+
+    st.image("figures/fig_uncertainty.png", use_container_width=True,
+              caption="Standard deviation across 200 MC Dropout passes, full (x,t) domain. "
+                      "White contour lines trace the mean predicted temperature.")
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Mean uncertainty", f"{unc['Mean uncertainty across the domain']:.4f}")
+    with col2:
+        st.metric("Max uncertainty", f"{unc['Max uncertainty across the domain']:.4f}")
+    with col3:
+        loc = unc['Max uncertainty co-ordinates']
+        st.metric("Max at (x, t)", f"({loc['x']:.2f}, {loc['t']:.2f})")
+
+    st.markdown(
+        '<div class="synthia-card">'
+        '<strong style="color:var(--text)">Why the interior, not the edges</strong><br>'
+        'Boundary and initial conditions directly supervise the edges of the domain — '
+        'the rod ends and t=0 are pinned by their own loss terms. Interior points have '
+        'only the PDE residual to constrain them, so uncertainty is highest away from '
+        'those directly-supervised regions, not at the steepest temperature gradient. '
+        'Uncertainty here tracks proximity to constraints, not local gradient steepness.'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 st.markdown(
     """
