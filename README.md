@@ -126,7 +126,7 @@ synthia/
 
 ## Tech stack
 
-PyTorch (CPU wheel for deployment), NumPy, SciPy, Plotly, Streamlit. Deployed on Streamlit Community Cloud.
+PyTorch (CPU wheel for deployment), NumPy, SciPy, Matplotlib, Plotly, Streamlit. Deployed on Streamlit Community Cloud.
 
 ## License
 
